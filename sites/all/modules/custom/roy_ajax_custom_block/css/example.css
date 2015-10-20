@@ -1,0 +1,16 @@
+.show-form-search {
+    background-color: #fff;
+    border: 1px solid #d4d4d4;
+    color: #000;
+    display: block;
+    margin: -32px 0 10px 240px;
+    padding: 5px 20px 2px;
+    position: absolute;
+    text-align: left;
+    width: 433px;
+    z-index: 99999;
+}
+ 
+.hide-form-search {
+    display:none;
+}

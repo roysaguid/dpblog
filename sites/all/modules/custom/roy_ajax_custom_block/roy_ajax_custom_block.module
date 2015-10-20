@@ -1,0 +1,112 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function roy_ajax_custom_block_menu() {
+ 
+    $items['example/ajax/search'] = array(
+        'page callback' => 'roy_ajax_custom_block_ajax_search',
+        'access arguments' => array('access content'),
+        'type' => MENU_CALLBACK,
+    );
+ 
+    return $items;
+}
+
+function roy_ajax_custom_block_block_info() {
+ 
+    $blocks['example_name_block'] = array(
+            'info' => t('roy-ajax-custom-block'),
+            'status' => 1,
+            'cache' => DRUPAL_NO_CACHE // this will exclude the block from Drupal cache
+    );
+ 
+    return $blocks;
+}
+ 
+/**
+ * This hook generates the contents of the blocks themselves.
+ */
+function roy_ajax_custom_block_block_view($delta = '') {
+ 
+    switch ($delta) {
+        case 'example_name_block': // note the same name from the block_info
+            $block['subject'] = '';
+            $block['content'] = roy_ajax_custom_block_block_content(); // this function will print the block content
+ 
+            // call javascript file
+            drupal_add_js(drupal_get_path('module', 'roy_ajax_custom_block') . '/js/example.js');
+ 
+            // call css file
+            drupal_add_css(drupal_get_path('module', 'roy_ajax_custom_block') . '/css/example.css');
+    }
+    return $block;
+}
+
+/**
+ *  Output search block content
+ * @return string
+ */
+function roy_ajax_custom_block_block_content() {
+    global $base_url;
+ 
+    // Keep the title value if we have the block in every page 
+    $title = isset($_GET['title']) ? $_GET['title'] : "";
+ 
+    $output ='       
+            <div class="row form-search-example">
+                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                    <h2>Search form example</h2>
+                    <form class="example-form" method="get">
+                        <input type="text" id="title" name="title" autocomplete="off" value="'. $title .'"  placeholder="' . t('Type article title') .'">
+                        <button type="submit" class="submit"><i class="fa fa-2x fa-search"></i> </button>
+                    </form>
+                </div>
+            </div>
+          <div id="form-ajax-results"></div>
+    ';
+    return $output;
+}
+
+/**
+ * AJAX: search
+ */
+function roy_ajax_custom_block_ajax_search() {
+    global $base_url;
+ 
+    $title = $_POST['title'];
+    $found = false;
+    $output = null;
+    if (strlen($title)>3) {
+        // Query article and page content type
+        $query = db_select('node', 'n')->fields('n', array('title','nid'));
+        $db_or = db_or();
+        $db_or->condition('n.type', 'article');
+        $db_or->condition('n.type', 'page'); 
+ 
+        $results = $query->condition($db_or)
+        ->condition('n.title','%'.$title.'%','LIKE')
+        ->orderBy('n.title', 'ASC')
+        ->range(0,10)
+        ->execute()
+        ->fetchAll();
+ 
+        if (!empty($results)) {
+            $found = true;
+            foreach ($results as $node) {
+                // get the alias url 
+                $url = drupal_get_path_alias("node/" . $node->nid);
+                $output .= '
+                    <div class="ajax-content-selector" data-title="'.$node->title.'">
+                        <a href="'.$url.'" title="' . $node->title . '">' . $node->title . '</a>
+                    </div>';
+            }
+        }
+    } 
+ 
+    echo json_encode(array('success' => $found, 'content' => $output));
+ 
+    module_invoke_all('exit');
+    exit;
+}

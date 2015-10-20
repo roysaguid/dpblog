@@ -1,0 +1,5 @@
+name = Roy Sample Ajax
+description = Roy Sample Ajax Custom Module
+version = 0.1
+core = 7.x
+package = test custom module roy

@@ -1,0 +1,8 @@
+;$Id$
+name = Roy Ajax Custom Block
+description = Example module for a block with an ajax call
+package = test custom module roy
+core = 7.x
+;dependencies[] = autoload
+;php = 5.3
+version = "7.x-1.0"
