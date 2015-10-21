@@ -1,0 +1,252 @@
+<?php
+
+/**
+ * Implements hook_block_info
+ */
+function sample_module_block_info() {
+  $blocks = array();
+
+  $blocks['testajax_container'] = array(
+    'info' => t('Container block of our testajax contents'),
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view
+ */
+function sample_module_block_view($delta = '') {
+  $function = __FUNCTION__ . '_' . $delta;
+  if (function_exists($function)) {
+    return $function();
+  }
+}
+
+function sample_module_block_view_testajax_container() {
+  $block = array();
+
+  $block['content'] = '<h1>You selected: </h1><div id="testajax-ajax-wrapper"><strong>' . 
+                      t('Please select a content!') . '</strong></div>
+                      <div class="testajax-footer"><em>' . 
+                      t('This is a footer and got nothing to do with the main wrapper. This should still be here after selecting a content') . '</em></div>';
+
+  return $block;
+}
+
+/**
+ * Implements hook_permission
+ */
+function sample_module_permission() {
+  return array(
+    'administer sample module' => array(
+      'title' => t('Administer Sample Module'),
+      'description' => t('Configure Sample Module.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function sample_module_menu(){  
+  $items = array();
+  $items['admin/config/sample-module'] = array(
+    'page callback' => 'drupal_get_form', //function pag tinawag ung url (drupal_get_form() drupal function sya)
+    'title' => t('Sample Module'),
+    'page arguments' => array('sample_module_config_form'), //function na mag return ng drupal form array/object
+    'description' => 'Configure Sample Module',
+    'access arguments' => array('administer sample module'), //ung permission na ginawa nten sa hook_permission()
+  );
+  
+  $items['sample-module-page'] = array(
+    'page callback' => 'sample_module_page', //function pag tinawag ung url
+    'title' => t('Sample Page'),
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  
+  $items['sample-module-page-with-args/%'] = array(
+    'page callback' => 'sample_module_page_with_args', //function pag tinawag ung url
+    'title' => t('Sample Page'),
+    'page arguments' => array(1), //kung pang ilan sa url ung argument mo. 1 kasi nag start sa 0 from the left nung path
+    'access arguments' => array('access content'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['testajax/%/%node'] = array(
+    'access arguments' => array('access content'),
+    'page callback' => 'testajax_callback',
+    'page arguments' => array(1, 2),
+    'type' => MENU_CALLBACK,
+  );
+  
+  return $items;
+}
+
+function testajax_callback($js, $node){
+  // If the nojs didn't get changed to ajax, the user has no javascript.
+  // Send them to the regular node page instead.
+  if ($js == 'nojs') {
+    drupal_goto('node/' . $node->nid);
+  }
+
+  // Get the render array for the node.
+  $build = node_view($node);
+
+  // Render the node into html.
+  $html = render($build);
+
+  // Prepare an ajax command to insert the node html into our ajax wrapper.
+  $commands = array();
+  $commands[] = ajax_command_html('#testajax-ajax-wrapper', $html);
+
+  // Render the commands into JSON and print them.
+  print ajax_render($commands);
+  exit;  // Exit so Drupal doesn't have a chance to build a whole page.
+}
+
+function sample_module_config_form(){
+  // sample ng pag gawa ng custom form sa drupal
+  // read https://api.drupal.org/api/drupal/developer!topics!forms_api_reference.html/7
+  // for more details :D
+  $form = null;
+  $form['date'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Test'
+  );
+
+  $form['sendmail'] = array(
+    '#type' => 'submit',
+    '#submit' => array('sample_module_config_form_sendmail_submit'),
+    '#execute_submit_callback' => TRUE,
+    '#value' => t('Send mail')
+  );
+
+  $form['oauth_connect'] = array(
+    '#type' => 'submit',
+    '#submit' => array('sample_module_config_form_connect_submit'),
+    '#execute_submit_callback' => TRUE,
+    '#value' => t('Connect to Vhin and Rich Oauth')
+  );
+
+  $form['insta_connect'] = array(
+    '#type' => 'submit',
+    '#submit' => array('sample_module_config_form_insta_connect_submit'),
+    '#execute_submit_callback' => TRUE,
+    '#value' => t('Connect to instagram')
+  );
+
+  $header = array(
+    t('Head 1'),
+    t('Head 2'),
+    t('Head 3')
+  );
+
+  $rows[] = array(
+    'Value 1.1',
+    'Value 1.3',
+    'Value 1.3',
+  );
+  $rows[] = array(
+    'Value 2.1',
+    'Value 2.3',
+    'Value 2.3',
+  );
+  $rows[] = array(
+    'Value 3.1',
+    'Value 3.3',
+    'Value 3.3',
+  );
+  $form['test_table'] = array(
+    '#markup' => theme('table', array('header' => $header, 'rows' => $rows))
+  );
+  return system_settings_form($form);
+}
+
+function sample_module_config_form_insta_connect_submit($form, &$form_state){
+  $url = 'https://api.instagram.com/v1/tags/nofilter/media/recent?client_id=c009ac352f59439ab860fb57958e54c9';
+  $response = drupal_http_request($url);
+  $data = $response->data;
+  $data = drupal_json_decode($data);
+  dpm($data);
+}
+
+function sample_module_config_form_connect_submit($form, &$form_state){
+  $site_url = 'http://vhinandrich.com';
+
+  $consumer_key = 'scJ4eMJnHLoH9ECnSrNbjjJtMkLrVTLo';
+  $consumer_secret = 'CwDqYs9HP5GFiEeUeF6GHUzbuWUynvEE';
+
+  $signature_method = 'HMAC-SHA1';
+  $timestamp = strtotime('now');
+  $nonce = substr(str_shuffle(str_repeat("0123456789abcdefghijklmnopqrstuvwxyz", 6)), 0, 6);
+
+  // make signature and append to params
+  $signature = urlencode(hash_hmac('sha1', $consumer_key, $consumer_secret, TRUE));
+
+  $request_token_options = array(
+    'method' => 'GET',
+    'data' => '',
+    'headers' => array('Authorization' => "OAuth oauth_consumer_key=\"$consumer_key\",oauth_signature_method=\"$signature_method\",oauth_timestamp=\"$timestamp\",oauth_nonce=\"$nonce\",oauth_version=\"1.0\",oauth_signature=\"$signature\"")
+  );
+  dpm($request_token_options);
+
+  $tokens = drupal_http_request($site_url . '/oauth/request_token', $request_token_options);
+  dpm($tokens);
+}
+
+function sample_module_config_form_sendmail_submit($form, &$form_state){
+  $email = 'mq.cristobal@gmail.com';
+  $params = array();
+  $file = file_load(1);
+  $params[] =  array(
+    'filecontent'    => $file->uri,
+    'filename' => $file->filename,
+    'filemime' => $file->filemime,
+                    );
+  $message = drupal_mail('sendemail', 'notify', $email, language_default(), $params);
+}
+
+function sendemail_mail($key, &$message, $params){
+  global $user;
+  $currentuser = user_load($user->uid);
+
+   //Setting email headers, subject line and the body. 
+  $message['headers']['MIME-Version'] = '1.0';
+  $message['headers']['Content-Type'] = 'multipart/mixed; text/html; charset=UTF-8; format=flowed;';
+  $message['subject'] = t('A subject line');
+  $message['body'][] = "<p>"."You just an email with attachments"."</p>";
+  //Adding our attachment array.
+  $message['params']['attachments'] = $params;    
+}
+
+function sample_module_page(){
+  return 'test';
+}
+
+function sample_module_page_with_args($arg){
+  return $arg;
+}
+
+function sample_module_theme($existing, $type, $theme, $path) {
+  $base = array(
+    'file' => 'theme.inc',
+    'path' => $path . '/theme',
+  );
+
+  $themes = array();
+  $themes['sample_module_field_collection_table_multiple_value_fields'] = $base + array(
+    'render element' => 'element'
+  );
+
+  $themes['sample_module_table'] = $base + array(
+    'variables' => array('header' => NULL, 'rows' => NULL, 'attributes' => array(), 'caption' => NULL, 'colgroups' => array(), 'sticky' => TRUE, 'empty' => ''),
+  );
+
+  return $themes;
+}
+
+function sample_module_form_test_entityform_edit_form_alter(&$form, &$form_state) {
+  $form['field_test_collection'][LANGUAGE_NONE]['#theme'] = 'sample_module_field_collection_table_multiple_value_fields';
+}

@@ -1,0 +1,13 @@
+name = Sample Module
+description = Sample Module Astig
+package = MQ Cristobal
+core = 7.x
+
+files[] = sample_module.module
+configure = admin/config/sample-module
+
+; Information added by drupal.org packaging script on 2012-02-10
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "sample_module"
+datestamp = "1392949874"
