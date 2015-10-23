@@ -1,6 +1,7 @@
 <?php
 //add comment - studying git branching and merging.
 //add comment - studying git branching and merging 2.
+//comment for kups branch
 function roy_ajax_menu() {
         $items['roy_ajax-ajax/%/%node'] = array(
                 'access arguments' => array('access content'),
