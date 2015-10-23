@@ -1,5 +1,5 @@
 <?php
-
+//add comment - studying git branching and merging.
 function roy_ajax_menu() {
         $items['roy_ajax-ajax/%/%node'] = array(
                 'access arguments' => array('access content'),
